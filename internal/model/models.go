@@ -1,13 +1,13 @@
 package model
 
-type Person struct {
-	ID    int    `json:"id" db:"id"`
-	Name  string `json:"name" db:"name"`
-	Email string `json:"email" db:"email"`
-}
+import "time"
 
-type Employer struct {
-	ID      int    `json:"id" db:"id"`
-	Company string `json:"company" db:"company"`
-	Person  Person `json:"person" db:"person"`
+type Patient struct {
+	ID         int       `json:"id" db:"id"`
+	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+	Surname    string    `json:"surname" db:"surname"`
+	Name       string    `json:"name" db:"name"`
+	Patronymic string    `json:"patronymic" db:"patronymic"`
+	Gender     uint8     `json:"gender" db:"gender"`
+	Birthday   time.Time `json:"birthday" db:"birthday"`
 }
