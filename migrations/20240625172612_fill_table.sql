@@ -10,5 +10,5 @@ INSERT INTO patients (id, created_at, surname, name, patronymic, gender, birthda
 -- +goose StatementEnd
 -- +goose Down
 -- +goose StatementBegin
-DELETE FROM patients WHERE id in (1, 2, 3, 4,5,6);
+DELETE FROM patients;
 -- +goose StatementEnd
