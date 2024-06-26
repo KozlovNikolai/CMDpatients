@@ -3,139 +3,34 @@ package server
 import (
 	"context"
 	"fmt"
-	"gin-pg-crud/internal/model"
-	"gin-pg-crud/internal/store"
+	"time"
+
 	"net/http"
 	"strconv"
 
+	"github.com/KozlovNikolai/CMDpatients/internal/model"
+	"github.com/KozlovNikolai/CMDpatients/internal/store"
 	"github.com/gin-gonic/gin"
 )
 
-func CreateEmployer(c *gin.Context) {
-	var employer model.Employer
-	var person model.Person
-	if err := c.ShouldBindJSON(&employer); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	fmt.Printf("employer=%v\n", employer)
-	query := `
-	SELECT persons.id,persons.name,persons.email
-	FROM persons
-	WHERE persons.id=$1 LIMIT 100`
-	row := store.DB.QueryRow(context.Background(), query, employer.Person.ID)
-	err := row.Scan(&person.ID, &person.Name, &person.Email)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Person not found"})
-		return
-	}
-	employer.Person.Email = person.Email
-	employer.Person.Name = person.Name
-	query = `
-		INSERT INTO employers (company,person_id)
-		VALUES ($1,$2)
-		RETURNING id`
-	err = store.DB.QueryRow(context.Background(), query, employer.Company, employer.Person.ID).Scan(&employer.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusCreated, employer)
-}
-
-func GetEmployer(c *gin.Context) {
+func Delete(c *gin.Context) {
+	var patient model.Patient
 	id, _ := strconv.Atoi(c.Param("id"))
-	var employer model.Employer
+
 	query := `
-		SELECT employers.id, employers.company, persons.id,persons.name,persons.email
-		FROM employers
-		JOIN persons ON employers.person_id = persons.id
-		WHERE employers.id=$1 LIMIT 100`
+	SELECT patients.id
+	FROM patients
+	WHERE patients.id=$1 LIMIT 100`
 	row := store.DB.QueryRow(context.Background(), query, id)
-	err := row.Scan(&employer.ID, &employer.Company, &employer.Person.ID, &employer.Person.Name, &employer.Person.Email)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Employer not found"})
-		return
-	}
-	c.JSON(http.StatusOK, employer)
-}
 
-func GetEmployerList(c *gin.Context) {
-	var employers []model.Employer
-	query := `
-		SELECT employers.id, employers.company, persons.id,persons.name,persons.email
-		FROM employers
-		JOIN persons ON employers.person_id = persons.id
-		LIMIT 100`
-	rows, err := store.DB.Query(context.Background(), query)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var employer model.Employer
-		err := rows.Scan(&employer.ID, &employer.Company, &employer.Person.ID, &employer.Person.Name, &employer.Person.Email)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		employers = append(employers, employer)
-	}
+	err := row.Scan(&patient.ID)
 
-	if err := rows.Err(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, employers)
-}
-
-func UpdateEmployer(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	var employer model.Employer
-	if err := c.ShouldBindJSON(&employer); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	}
-	query := `
-		UPDATE employers
-		SET company=$1,name=$2,email=$3
-		WHERE id=$4`
-	_, err := store.DB.Exec(context.Background(), query, employer.Company, employer.Person.Name, employer.Person.Email, id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"status": "Update successfully"})
-}
-
-func DeleteEmployer(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	query := `DELETE FROM employers WHERE id=$1`
-	_, err := store.DB.Exec(context.Background(), query, id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"status": "Deleted successfully"})
-}
-
-func DeletePerson(c *gin.Context) {
-	var person model.Person
-	id, _ := strconv.Atoi(c.Param("id"))
-
-	query := `
-	SELECT persons.id,persons.name,persons.email
-	FROM persons
-	WHERE persons.id=$1 LIMIT 100`
-	row := store.DB.QueryRow(context.Background(), query, id)
-	err := row.Scan(&person.ID, &person.Name, &person.Email)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Person not found"})
 		return
 	}
 
-	query = `DELETE FROM persons WHERE id=$1`
+	query = `DELETE FROM patients WHERE id=$1`
 	_, err = store.DB.Exec(context.Background(), query, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -144,45 +39,50 @@ func DeletePerson(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "Deleted successfully"})
 }
 
-func CreatePerson(c *gin.Context) {
-	var person model.Person
-	if err := c.ShouldBindJSON(&person); err != nil {
+func Create(c *gin.Context) {
+	var patient model.Patient
+	if err := c.ShouldBindJSON(&patient); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	fmt.Println(patient)
+	patient.CreatedAt = time.Now().UTC()
+	fmt.Println(patient)
 	query := `
-		INSERT INTO persons (name,email)
-		VALUES ($1,$2)
+		INSERT INTO patients (created_at,surname,name,patronymic,gender,birthday)
+		VALUES ($1,$2,$3,$4,$5,$6)
 		RETURNING id`
-	err := store.DB.QueryRow(context.Background(), query, person.Name, person.Email).Scan(&person.ID)
+	err := store.DB.QueryRow(context.Background(), query, patient.CreatedAt, patient.Surname, patient.Name,
+		patient.Patronymic, patient.Gender, patient.Birthday).Scan(&patient.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, person)
+	c.JSON(http.StatusCreated, patient)
 }
 
-func GetPerson(c *gin.Context) {
+func Get(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	var person model.Person
+	var patient model.Patient
 	query := `
-		SELECT persons.id,persons.name,persons.email
-		FROM persons
-		WHERE persons.id=$1 LIMIT 100`
+		SELECT id,created_at,surname,name,patronymic,gender,birthday
+		FROM patients
+		WHERE patients.id=$1 LIMIT 100`
 	row := store.DB.QueryRow(context.Background(), query, id)
-	err := row.Scan(&person.ID, &person.Name, &person.Email)
+	err := row.Scan(&patient.ID, &patient.CreatedAt, &patient.Surname, &patient.Name,
+		&patient.Patronymic, &patient.Gender, &patient.Birthday)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Person not found"})
 		return
 	}
-	c.JSON(http.StatusOK, person)
+	c.JSON(http.StatusOK, patient)
 }
 
-func GetPersonList(c *gin.Context) {
-	var persons []model.Person
+func GetList(c *gin.Context) {
+	var patients []model.Patient
 	query := `
-		SELECT persons.id,persons.name,persons.email
-		FROM persons
+		SELECT id,created_at,surname,name,patronymic,gender,birthday
+		FROM patients
 		LIMIT 100`
 	rows, err := store.DB.Query(context.Background(), query)
 	if err != nil {
@@ -191,13 +91,14 @@ func GetPersonList(c *gin.Context) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var person model.Person
-		err := rows.Scan(&person.ID, &person.Name, &person.Email)
+		var patient model.Patient
+		err := rows.Scan(&patient.ID, &patient.CreatedAt, &patient.Surname, &patient.Name,
+			&patient.Patronymic, &patient.Gender, &patient.Birthday)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		persons = append(persons, person)
+		patients = append(patients, patient)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -205,5 +106,5 @@ func GetPersonList(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, persons)
+	c.JSON(http.StatusOK, patients)
 }

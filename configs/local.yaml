@@ -1,0 +1,5 @@
+storage_path: "postgres://dbuser:dbpass@localhost:35433/db_cmd?sslmode=disable"
+http_server:
+  address: "0.0.0.0:8080"
+  timeout: 4s
+  idle_timout: 60s
